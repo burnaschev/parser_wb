@@ -151,9 +151,9 @@ def parser(url: str, low_price: int = 1, top_price: int = 1000000, discount: int
 
 if __name__ == '__main__':
     """данные для теста. собераем товар с раздела велосипеды в ценовой категории от 1тыс, до 100тыс, со скидкой 10%"""
-    url = 'https://www.wildberries.ru/catalog/obuv/detskaya/dlya-malchikov'
+    url = 'https://www.wildberries.ru/catalog/transportnye-sredstva/avtomobili'
     low_price = 70000  # нижний порог цены
-    top_price = 1000000  # верхний порог цены
+    top_price = 10000000  # верхний порог цены
     discount = 10  # скидка в %
     start = datetime.datetime.now()  # запишем время старта
     # clear_table()  # очищаем таблицу перед следующим запуском если потребуется
