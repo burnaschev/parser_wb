@@ -2,12 +2,9 @@ import datetime
 
 import requests
 from retry import retry
-from sqlalchemy.orm import Session
 
-from db.db_config import engine
+from db.db_config import session_sync
 from db.models import Product
-
-Session = Session(engine)
 
 
 def get_catalogs_wb() -> dict:
@@ -50,31 +47,21 @@ def get_data_from_json(json_file: dict) -> list:
         sku = data.get('id')
         name = data.get('name')
         price = int(data.get("priceU") / 100)
-        salePriceU = int(data.get('salePriceU') / 100)
         sale = data.get('sale')
         brand = data.get('brand')
         rating = data.get('rating')
         supplier = data.get('supplier')
         supplierRating = data.get('supplierRating')
-        feedbacks = data.get('feedbacks')
-        reviewRating = data.get('reviewRating')
-        promoTextCard = data.get('promoTextCard')
-        promoTextCat = data.get('promoTextCat')
+
         data_list.append({
-            'id': sku,
+            'article_id': sku,
             'name': name,
             'price': price,
-            'salePriceU': salePriceU,
             'sale': sale,
             'brand': brand,
             'rating': rating,
             'supplier': supplier,
             'supplierRating': supplierRating,
-            'feedbacks': feedbacks,
-            'reviewRating': reviewRating,
-            'promoTextCard': promoTextCard,
-            'promoTextCat': promoTextCat,
-            'link': f'https://www.wildberries.ru/catalog/{data.get("id")}/detail.aspx?targetUrl=BP'
         })
         # print(f"SKU:{data['id']} Цена: {int(data['salePriceU'] / 100)} Название: {data['name']} Рейтинг: {data['rating']}")
     return data_list
@@ -114,26 +101,22 @@ def scrap_page(page: int, shard: str, query: str, low_price: int, top_price: int
 def save_db(data_list: list):
     """сохранение результата в БД """
     try:
-        with Session as session:
+        with session_sync() as session:
+            products = [Product(**data) for data in data_list]
+            session.add_all(products)
+            session.commit()
+    except Exception as e:
+        raise ValueError from e
+
+
+def clear_table():
+    """Очистка таблицы"""
+    try:
+        with session_sync() as session:
             session.query(Product).delete()
             session.commit()
-            new_product = []
-            for data in data_list:
-                new_product.append(Product(
-                    article_id=int(data.get('id', None)),
-                    name=data.get('name', None),
-                    price=int(data.get('price', None)),
-                    sale=data.get('sale', None),
-                    brand=data.get('brand', None),
-                    rating=data.get('rating', None),
-                    supplier=data.get('supplier', None),
-                    supplierRating=data.get('supplierRating', None)
-                ))
-            session.add_all(new_product)
-            session.commit()
-        print(f' Идёт сбор данных:... \n')
     except Exception as e:
-        print(e)
+        raise ValueError from e
 
 
 def parser(url: str, low_price: int = 1, top_price: int = 1000000, discount: int = 0):
@@ -153,29 +136,28 @@ def parser(url: str, low_price: int = 1, top_price: int = 1000000, discount: int
                 low_price=low_price,
                 top_price=top_price,
                 discount=discount)
-            data_list.append(data)
             print(f'Добавлено позиций: {len(get_data_from_json(data))}')
             if len(get_data_from_json(data)) > 0:
-                save_db(get_data_from_json(data))
                 data_list.extend(get_data_from_json(data))
             else:
                 break
-        print(f'Сбор данных завершен. Собрано: {len(data_list)} товаров.')
-        print(f'Ссылка для проверки: {url}?priceU={low_price * 100};{top_price * 100}&discount={discount}')
-    except TypeError:
-        print('Ошибка! Возможно не верно указан раздел. Удалите все доп фильтры с ссылки')
+        save_db(data_list)
+        print(f'Сбор данных завершен. Собрано: {len(data_list)} товаров. \n')
+        print("Данные успешно сохранены в базе данных.\n")
+        print(f'Ссылка для проверки: {url}?priceU={low_price * 100};{top_price * 100}&discount={discount}\n')
+    except TypeError as e:
+        print(f'Ошибка!{e} Возможно не верно указан раздел. Удалите все доп фильтры с ссылки\n')
 
 
 if __name__ == '__main__':
     """данные для теста. собераем товар с раздела велосипеды в ценовой категории от 1тыс, до 100тыс, со скидкой 10%"""
-    url = 'https://www.wildberries.ru/catalog/elektronika/noutbuki-pereferiya/noutbuki-ultrabuki'
-    low_price = 5000  # нижний порог цены
-    top_price = 100000  # верхний порог цены
+    url = 'https://www.wildberries.ru/catalog/obuv/detskaya/dlya-malchikov'
+    low_price = 70000  # нижний порог цены
+    top_price = 1000000  # верхний порог цены
     discount = 10  # скидка в %
     start = datetime.datetime.now()  # запишем время старта
-
+    # clear_table()  # очищаем таблицу перед следующим запуском если потребуется
     parser(url=url, low_price=low_price, top_price=top_price, discount=discount)
-
     end = datetime.datetime.now()  # запишем время завершения кода
     total = end - start
     print("Затраченное время:" + str(total))

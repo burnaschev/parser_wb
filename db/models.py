@@ -21,7 +21,8 @@ class User(Base):
 class Product(Base):
     __tablename__ = 'products'
 
-    article_id = Column(Integer, primary_key=True, nullable=False, index=True)
+    id = Column(Integer, primary_key=True)
+    article_id = Column(Integer, nullable=False)
     name = Column(String, **NULLABLE)
     price = Column(Integer, **NULLABLE)
     sale = Column(String, **NULLABLE)
