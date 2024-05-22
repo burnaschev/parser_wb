@@ -117,8 +117,6 @@ def save_db(data_list: list):
         with Session as session:
             session.query(Product).delete()
             session.commit()
-
-        with Session as session:
             new_product = []
             for data in data_list:
                 new_product.append(Product(
@@ -133,7 +131,7 @@ def save_db(data_list: list):
                 ))
             session.add_all(new_product)
             session.commit()
-        print(f'Все сохранено в базу данных! \n')
+        print(f' Идёт сбор данных:... \n')
     except Exception as e:
         print(e)
 

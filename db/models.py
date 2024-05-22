@@ -1,9 +1,10 @@
 from datetime import datetime
 
 from sqlalchemy import Column, Integer, String, DATE, ForeignKey
-from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy.orm import DeclarativeBase
 
 NULLABLE = {'nullable': True}
+
 
 class Base(DeclarativeBase):
     pass
@@ -30,4 +31,3 @@ class Product(Base):
     supplierRating = Column(String, **NULLABLE)
 
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=True)
-
